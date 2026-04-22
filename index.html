@@ -70,6 +70,11 @@
             <div id="questions-container" class="space-y-6">
                 <!-- Les questions seront injectées ici par JS -->
             </div>
+            
+            <!-- Logo intégré discrètement à la fin du questionnaire -->
+            <div class="mt-10 mb-2 flex justify-center pointer-events-none">
+                <img src="hsqssbfvo2u9u36qamxw.jpeg" alt="tk. logo" class="h-5 mix-blend-multiply opacity-60">
+            </div>
         </div>
 
         <!-- Écran 2 : Résultats (Caché par défaut) -->
@@ -85,6 +90,11 @@
             <button onclick="resetTest()" class="bg-gray-200 text-[#181818] font-bold py-3 px-8 rounded-full shadow hover:bg-gray-300 transition-colors w-full max-w-xs">
                 Refaire le test
             </button>
+            
+            <!-- Logo intégré discrètement sur l'écran de résultat -->
+            <div class="mt-10 flex justify-center pointer-events-none">
+                <img src="hsqssbfvo2u9u36qamxw.jpeg" alt="tk. logo" class="h-5 mix-blend-multiply opacity-60">
+            </div>
         </div>
 
     </main>
@@ -139,6 +149,7 @@
         function renderQuestions() {
             container.innerHTML = '';
             questions.forEach((q) => {
+                // Création du bloc HTML (j'ai retiré le oninput="updateValue..." pour utiliser des EventListeners purs)
                 const html = `
                     <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 pb-4">
                         <div class="flex items-start mb-6">
@@ -148,7 +159,7 @@
                         
                         <!-- Zone du curseur avec espace pour l'infobulle -->
                         <div class="relative mt-10 mb-2">
-                            <input type="range" id="q${q.id}" min="0" max="10" step="1" value="5" class="w-full relative z-10" oninput="updateValue(${q.id}, this.value)">
+                            <input type="range" id="q${q.id}" min="0" max="10" step="1" value="5" class="w-full relative z-10">
                             
                             <!-- Infobulle dynamique -->
                             <div class="absolute -top-10 transform -translate-x-1/2 bg-[#34528c] text-white text-sm font-bold px-3 py-1 rounded shadow-md z-0" id="tooltip-q${q.id}" style="left: 50%;">
@@ -166,22 +177,30 @@
                 `;
                 container.innerHTML += html;
             });
+
+            // Attacher les événements proprement APRES la création du HTML (plus robuste sur mobile)
+            questions.forEach((q) => {
+                const slider = document.getElementById(`q${q.id}`);
+                
+                // Pour chaque mouvement du curseur
+                slider.addEventListener('input', (e) => {
+                    updateValue(q.id, e.target.value);
+                });
+
+                // Forcer la position initiale correcte au chargement
+                updateValue(q.id, 5);
+            });
         }
 
         // Met à jour la valeur ET la position de l'infobulle
         function updateValue(id, value) {
-            // Mettre à jour le texte
             document.getElementById(`val-q${id}`).innerText = value;
             
-            // Calculer la nouvelle position (adaptée à l'échelle 0-10)
             const tooltip = document.getElementById(`tooltip-q${id}`);
             const percent = value / 10;
-            
-            // Largeur du "pouce" du slider (28px dans notre CSS). 
             const thumbWidth = 28;
             const offset = (0.5 - percent) * thumbWidth;
             
-            // Appliquer la position calculée
             tooltip.style.left = `calc(${percent * 100}% + ${offset}px)`;
         }
 
@@ -195,15 +214,10 @@
             
             const finalScore = ((total * 100) / 120).toFixed(1);
             
-            // Changer l'affichage
             document.getElementById('questionnaire-screen').classList.add('hidden');
             document.getElementById('bottom-bar').classList.add('hidden');
             document.getElementById('result-screen').classList.remove('hidden');
-            
-            // Remonter en haut
             document.getElementById('main-container').scrollTop = 0;
-            
-            // Afficher le score
             document.getElementById('final-score').innerText = finalScore;
         }
 
@@ -212,15 +226,12 @@
             for (let i = 1; i <= 12; i++) {
                 const slider = document.getElementById(`q${i}`);
                 slider.value = 5;
-                updateValue(i, 5); // Met à jour le texte et recentre la bulle
+                updateValue(i, 5);
             }
             
-            // Revenir à l'écran du questionnaire
             document.getElementById('result-screen').classList.add('hidden');
             document.getElementById('questionnaire-screen').classList.remove('hidden');
             document.getElementById('bottom-bar').classList.remove('hidden');
-            
-            // Remonter en haut
             document.getElementById('main-container').scrollTop = 0;
         }
 
