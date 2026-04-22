@@ -198,16 +198,17 @@
         // Calcul final et génération du QR Code
         function calculateScore() {
             let total = 0;
-            let qrData = "ACL-RSI:\r\n"; 
+            let qrData = "ACL-RSI:\n"; 
             
             for (let i = 1; i <= 12; i++) {
                 const val = parseInt(document.getElementById(`q${i}`).value, 10);
                 total += val;
-                qrData += `${i}-${val}\r\n`; 
+                // Format anti-erreur : ajout du "Q" devant le chiffre
+                qrData += `Q${i} : ${val}\n`; 
             }
             
             const finalScore = ((total * 100) / 120).toFixed(1);
-            qrData += `Total:${finalScore}/100`; 
+            qrData += `Total : ${finalScore}/100`; 
             
             // Affichage du score
             document.getElementById('final-score').innerText = finalScore;
