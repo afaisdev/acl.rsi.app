@@ -1,0 +1,172 @@
+```html
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Test ACL-RSI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom range slider styling for mobile */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 28px;
+            width: 28px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            margin-top: -10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 8px;
+            cursor: pointer;
+            background: #e5e7eb;
+            border-radius: 4px;
+        }
+        input[type=range]:focus {
+            outline: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 antialiased selection:bg-blue-200 overscroll-none">
+
+    <!-- Header -->
+    <header class="bg-blue-600 text-white p-4 shadow-md fixed top-0 w-full z-10">
+        <h1 class="text-xl font-bold text-center">Score ACL-RSI</h1>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="pt-20 pb-24 px-4 max-w-md mx-auto h-screen overflow-y-auto" id="main-container">
+        
+        <!-- Screen 1: Questionnaire -->
+        <div id="questionnaire-screen">
+            <p class="text-sm text-gray-600 mb-6 text-center">
+                Veuillez évaluer chaque question de 0 à 100 en déplaçant le curseur.
+            </p>
+            <div id="questions-container" class="space-y-6">
+                <!-- Questions will be injected here by JS -->
+            </div>
+        </div>
+
+        <!-- Screen 2: Results (Hidden by default) -->
+        <div id="result-screen" class="hidden flex flex-col items-center justify-center h-full pb-20">
+            <h2 class="text-2xl font-semibold text-gray-600 mb-2">Votre Score Total</h2>
+            <div class="w-48 h-48 bg-white rounded-full shadow-lg flex items-center justify-center border-4 border-blue-500 mb-8">
+                <span id="final-score" class="text-6xl font-black text-blue-600">--</span>
+            </div>
+            <p class="text-center text-gray-500 mb-8 px-4">
+                Le score ACL-RSI est calculé sur 100. Plus le score est élevé, plus la réponse psychologique au retour au sport est positive.
+            </p>
+            <button onclick="resetTest()" class="bg-gray-200 text-gray-800 font-bold py-3 px-8 rounded-full shadow hover:bg-gray-300 transition-colors w-full max-w-xs">
+                Refaire le test
+            </button>
+        </div>
+
+    </main>
+
+    <!-- Sticky Bottom Bar (Validation) -->
+    <div id="bottom-bar" class="fixed bottom-0 w-full bg-white border-t border-gray-200 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-10 flex justify-center max-w-md left-1/2 transform -translate-x-1/2">
+        <button onclick="calculateScore()" class="w-full bg-blue-600 text-white font-bold py-3 px-6 rounded-lg shadow-md active:bg-blue-700 transition-colors text-lg">
+            Valider le test
+        </button>
+    </div>
+
+    <script>
+        const questions = [
+            { id: 1, text: "Êtes-vous sûr(e) de pouvoir faire du sport sans vous blesser le genou ?", min: "Pas du tout sûr", max: "Tout à fait sûr" },
+            { id: 2, text: "Trouvez-vous frustrant de devoir tenir compte de votre genou pour faire du sport ?", min: "Extrêmement frustrant", max: "Pas du tout frustrant" },
+            { id: 3, text: "Avez-vous des pensées négatives sur votre genou en faisant du sport ?", min: "Extrêmement souvent", max: "Jamais" },
+            { id: 4, text: "Avez-vous peur de vous blesser de nouveau le genou en faisant du sport ?", min: "Extrêmement peur", max: "Pas du tout peur" },
+            { id: 5, text: "Êtes-vous confiant(e) dans le fait que votre genou ne lâchera pas en faisant du sport ?", min: "Pas du tout confiant", max: "Tout à fait confiant" },
+            { id: 6, text: "Êtes-vous sûr(e) de pouvoir faire du sport au même niveau qu’avant votre blessure ?", min: "Pas du tout sûr", max: "Tout à fait sûr" },
+            { id: 7, text: "Avez-vous peur de devoir être opéré(e) de nouveau à cause de votre sport ?", min: "Extrêmement peur", max: "Pas du tout peur" },
+            { id: 8, text: "Êtes-vous confiant(e) dans vos capacités physiques pour faire du sport ?", min: "Pas du tout confiant", max: "Tout à fait confiant" },
+            { id: 9, text: "Avez-vous peur que votre genou lâche en faisant du sport ?", min: "Extrêmement peur", max: "Pas du tout peur" },
+            { id: 10, text: "Pensez-vous être capable de vous donner à fond dans votre sport ?", min: "Pas du tout capable", max: "Tout à fait capable" },
+            { id: 11, text: "Êtes-vous tendu(e) en faisant du sport de peur de vous blesser le genou ?", min: "Extrêmement tendu", max: "Pas du tout tendu" },
+            { id: 12, text: "Êtes-vous détendu(e) en faisant du sport ?", min: "Pas du tout détendu", max: "Tout à fait détendu" }
+        ];
+
+        const container = document.getElementById('questions-container');
+
+        // Initialize questions
+        function renderQuestions() {
+            container.innerHTML = '';
+            questions.forEach((q, index) => {
+                const html = `
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+                        <div class="flex items-start mb-4">
+                            <span class="bg-blue-100 text-blue-700 font-bold rounded-full w-7 h-7 flex items-center justify-center text-sm shrink-0 mr-3 mt-0.5">${q.id}</span>
+                            <p class="text-gray-800 font-medium leading-tight text-lg">${q.text}</p>
+                        </div>
+                        <div class="relative mt-6 mb-2">
+                            <input type="range" id="q${q.id}" min="0" max="100" value="50" class="w-full" oninput="updateValue(${q.id}, this.value)">
+                            <div class="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded shadow" id="val-q${q.id}">
+                                50
+                            </div>
+                        </div>
+                        <div class="flex justify-between text-xs text-gray-500 font-medium mt-2">
+                            <span class="w-1/3 text-left leading-tight">${q.min} <br/>(0)</span>
+                            <span class="w-1/3 text-right leading-tight">${q.max} <br/>(100)</span>
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += html;
+            });
+        }
+
+        function updateValue(id, value) {
+            document.getElementById(`val-q${id}`).innerText = value;
+        }
+
+        function calculateScore() {
+            let total = 0;
+            for (let i = 1; i <= 12; i++) {
+                const val = parseInt(document.getElementById(`q${i}`).value, 10);
+                total += val;
+            }
+            
+            const meanScore = (total / 12).toFixed(1);
+            
+            // Switch UI
+            document.getElementById('questionnaire-screen').classList.add('hidden');
+            document.getElementById('bottom-bar').classList.add('hidden');
+            document.getElementById('result-screen').classList.remove('hidden');
+            
+            // Scroll to top
+            document.getElementById('main-container').scrollTop = 0;
+            
+            // Display Score
+            document.getElementById('final-score').innerText = meanScore;
+        }
+
+        function resetTest() {
+            // Reset values
+            for (let i = 1; i <= 12; i++) {
+                document.getElementById(`q${i}`).value = 50;
+                updateValue(i, 50);
+            }
+            
+            // Switch UI back
+            document.getElementById('result-screen').classList.add('hidden');
+            document.getElementById('questionnaire-screen').classList.remove('hidden');
+            document.getElementById('bottom-bar').classList.remove('hidden');
+            
+            // Scroll to top
+            document.getElementById('main-container').scrollTop = 0;
+        }
+
+        // Init
+        renderQuestions();
+    </script>
+</body>
+</html>
+
+```
